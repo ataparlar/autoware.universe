@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    imu_topic: ""
+    odom_topic: ""
+    point_cloud_topic: ""
+    lidar_min_range: 2.0
+    lidar_max_range: 120.0

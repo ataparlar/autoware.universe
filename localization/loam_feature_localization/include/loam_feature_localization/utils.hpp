@@ -105,6 +105,8 @@ public:
   template<typename T>
   static void imuRPY2rosRPY(sensor_msgs::msg::Imu *thisImuMsg, T *rosRoll, T *rosPitch, T *rosYaw);
 
+  static float pointDistance(PointType p);
+
   struct CloudInfo
   {
     bool imu_available;

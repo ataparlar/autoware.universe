@@ -100,6 +100,11 @@ void Utils::imuRPY2rosRPY(sensor_msgs::msg::Imu *thisImuMsg, T *rosRoll, T *rosP
   *rosYaw = imuYaw;
 }
 
+float Utils::pointDistance(PointType p)
+{
+  return sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
+}
+
 //std::vector<std::string> Utils::string_to_vec_split_by(const std::string & input, char splitter)
 //{
 //  std::stringstream ss_input(input);

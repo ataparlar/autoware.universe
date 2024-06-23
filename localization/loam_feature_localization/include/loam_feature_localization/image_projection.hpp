@@ -40,6 +40,7 @@ namespace loam_feature_localization
 {
 using PointCloud2 = sensor_msgs::msg::PointCloud2;
 
+const int queueLength = 2000;
 
 
 
@@ -63,7 +64,11 @@ public:
   bool odomDeskewFlag;
 
   cv::Mat rangeMat;
+  cv::Mat HSV;
 
+
+  double lidarMinRange;
+  double lidarMaxRange;
 
   Eigen::Affine3f transStartInverse;
 
@@ -81,6 +86,24 @@ public:
 
   std::vector<int> columnIdnCountVec;
 
+  double *imuTime = new double[queueLength];
+  double *imuRotX = new double[queueLength];
+  double *imuRotY = new double[queueLength];
+  double *imuRotZ = new double[queueLength];
+
+
+  void allocateMemory();
+  void resetParameters();
+  void findRotation(double pointTime, float *rotXCur, float *rotYCur, float *rotZCur);
+  void findPosition(double relTime, float *posXCur, float *posYCur, float *posZCur);
+  PointType deskewPoint(PointType *point, double relTime);
+  void projectPointCloud();
+  void cloudExtraction();
+
+//  int N_SCAN = 1800;
+//  int Horizon_SCAN = 16;
+  int N_SCAN = 2000;
+  int Horizon_SCAN = 32;
 
 private:
 

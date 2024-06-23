@@ -6,21 +6,28 @@ autoware_package()
 
 find_package(PCL REQUIRED COMPONENTS common io registration)
 find_package(OpenCV REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+find_package(cv_bridge REQUIRED)
+include_directories(
+  ${PCL_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${cv_bridge_INCLUDE_DIRS})
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/loam_feature_localization.cpp
-  src/image_projection.cpp
-  src/feature_extraction.cpp
-  src/utils.cpp
   include/loam_feature_localization/loam_feature_localization.hpp
   include/loam_feature_localization/image_projection.hpp
   include/loam_feature_localization/feature_extraction.hpp
   include/loam_feature_localization/utils.hpp
+  src/loam_feature_localization.cpp
+  src/image_projection.cpp
+  src/feature_extraction.cpp
+  src/utils.cpp
 )
 
 link_directories(${PCL_LIBRARY_DIRS})
-target_link_libraries(loam_feature_localization ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(loam_feature_localization
+  ${PCL_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${cv_bridge_LIBRARIES})
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "LoamFeatureLocalization"
@@ -32,8 +39,8 @@ rclcpp_components_register_node(${PROJECT_NAME}
 #
 #endif()
 
-#ament_auto_package(
-#  INSTALL_TO_SHARE
-#  launch
-#  config
-#)
+ament_auto_package(
+  INSTALL_TO_SHARE
+  launch
+  config
+)

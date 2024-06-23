@@ -42,7 +42,6 @@
 
 namespace loam_feature_localization
 {
-const int queueLength = 2000;
 
 
 class LoamFeatureLocalization : public rclcpp::Node
@@ -60,16 +59,14 @@ private:
   std::string point_cloud_topic_;
   std::string imu_topic_;
   std::string odom_topic_;
+  double lidar_min_range_;
+  double lidar_max_range_;
 
   ImageProjection::ImageProjection::SharedPtr image_projection;
 
   std::mutex imuLock;
   std::mutex odoLock;
 
-  double *imuTime = new double[queueLength];
-  double *imuRotX = new double[queueLength];
-  double *imuRotY = new double[queueLength];
-  double *imuRotZ = new double[queueLength];
 
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subLaserCloud;
@@ -93,8 +90,7 @@ private:
 
 
 
-  void allocateMemory();
-  void resetParameters();
+
   void imuHandler(const sensor_msgs::msg::Imu::SharedPtr imuMsg);
   void odometryHandler(const nav_msgs::msg::Odometry::SharedPtr odometryMsg);
   void cloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudMsg);
@@ -102,6 +98,7 @@ private:
   bool deskewInfo();
   void imuDeskewInfo();
   void odomDeskewInfo();
+  void publishImage();
 
   int N_SCAN = 1800;
   int Horizon_SCAN = 16;
