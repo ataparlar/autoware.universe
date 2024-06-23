@@ -5,7 +5,8 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(PCL REQUIRED COMPONENTS common io registration)
-include_directories(${PCL_INCLUDE_DIRS})
+find_package(OpenCV REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/loam_feature_localization.cpp
@@ -19,7 +20,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 link_directories(${PCL_LIBRARY_DIRS})
-target_link_libraries(loam_feature_localization ${PCL_LIBRARIES})
+target_link_libraries(loam_feature_localization ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "LoamFeatureLocalization"
