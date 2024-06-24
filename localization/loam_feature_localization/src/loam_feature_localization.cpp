@@ -13,15 +13,20 @@
 // limitations under the License.
 
 #include "loam_feature_localization/loam_feature_localization.hpp"
-
 #include "loam_feature_localization/utils.hpp"
+
 #include "cv_bridge/cv_bridge.h"
+#include "loam_feature_localization/utils.hpp"
 
-#include <pcl/common/impl/eigen.hpp>
-
+#include <pcl/point_cloud.h>
+#include <pcl/range_image/range_image.h>
 #include <pcl/filters/filter.h>
-#include <tf2/LinearMath/Matrix3x3.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 #include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/convert.h>
 
 namespace loam_feature_localization
@@ -32,8 +37,8 @@ LoamFeatureLocalization::LoamFeatureLocalization(const rclcpp::NodeOptions & opt
   this->declare_parameter("imu_topic", "");
   this->declare_parameter("odom_topic", "");
   this->declare_parameter("point_cloud_topic", "");
-  this->declare_parameter("lidar_min_range", "");
-  this->declare_parameter("lidar_max_range", "");
+  this->declare_parameter("lidar_min_range", 1.0);
+  this->declare_parameter("lidar_max_range", 120.0);
 
   imu_topic_ = this->get_parameter("imu_topic").as_string();
   odom_topic_ = this->get_parameter("odom_topic").as_string();
@@ -44,7 +49,7 @@ LoamFeatureLocalization::LoamFeatureLocalization(const rclcpp::NodeOptions & opt
   image_projection = std::make_shared<loam_feature_localization::ImageProjection>();
   image_projection->lidarMinRange = lidar_min_range_;
   image_projection->lidarMaxRange = lidar_max_range_;
-
+  image_projection->allocateMemory();
 
   callbackGroupLidar = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   callbackGroupImu = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -61,7 +66,7 @@ LoamFeatureLocalization::LoamFeatureLocalization(const rclcpp::NodeOptions & opt
     imu_topic_, rclcpp::SensorDataQoS(),
     std::bind(&LoamFeatureLocalization::imuHandler, this, std::placeholders::_1), imuOpt);
   subOdom = create_subscription<nav_msgs::msg::Odometry>(
-    odom_topic_ + "_incremental", rclcpp::SensorDataQoS(),
+    odom_topic_, rclcpp::SensorDataQoS(),
     std::bind(&LoamFeatureLocalization::odometryHandler, this, std::placeholders::_1), odomOpt);
   subLaserCloud = create_subscription<sensor_msgs::msg::PointCloud2>(
     point_cloud_topic_, rclcpp::SensorDataQoS(),
@@ -73,7 +78,8 @@ LoamFeatureLocalization::LoamFeatureLocalization(const rclcpp::NodeOptions & opt
 
 void LoamFeatureLocalization::imuHandler(const sensor_msgs::msg::Imu::SharedPtr imuMsg)
 {
-  sensor_msgs::msg::Imu thisImu = Utils::imuConverter(*imuMsg);
+
+  sensor_msgs::msg::Imu thisImu = image_projection->utils->imuConverter(*imuMsg);
 
   std::lock_guard<std::mutex> lock1(imuLock);
   imuQueue.push_back(thisImu);
@@ -88,6 +94,8 @@ void LoamFeatureLocalization::odometryHandler(const nav_msgs::msg::Odometry::Sha
 void LoamFeatureLocalization::cloudHandler(
   const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudMsg)
 {
+  std::cout << "cloud_handler" << std::endl;
+
   if (!cachePointCloud(laserCloudMsg)) return;
 
   if (!deskewInfo()) return;
@@ -127,13 +135,20 @@ void LoamFeatureLocalization::publishImage()
 bool LoamFeatureLocalization::cachePointCloud(
   const sensor_msgs::msg::PointCloud2::SharedPtr & laserCloudMsg)
 {
+  std::cout << "image_projection->laserCloudIn.size(): " << image_projection->laserCloudIn->size() << std::endl;
+
   // cache point cloud
   cloudQueue.push_back(*laserCloudMsg);
+  std::cout << "cloudQueue.size(): " << cloudQueue.size() << std::endl;
   if (cloudQueue.size() <= 2) return false;
 
   // convert cloud
   currentCloudMsg = std::move(cloudQueue.front());
   cloudQueue.pop_front();
+  std::cout << "cloudQueue.pop_front() " << std::endl;
+
+  pcl::moveFromROSMsg(currentCloudMsg, *image_projection->laserCloudIn);
+
   //  if (sensor == SensorType::VELODYNE || sensor == SensorType::LIVOX)
   //  {
   //    pcl::moveFromROSMsg(currentCloudMsg, *laserCloudIn);
@@ -164,14 +179,14 @@ bool LoamFeatureLocalization::cachePointCloud(
 
   // get timestamp
   image_projection->cloudHeader = currentCloudMsg.header;
-  image_projection->timeScanCur = Utils::stamp2Sec(image_projection->cloudHeader.stamp);
+  image_projection->timeScanCur = image_projection->utils->stamp2Sec(image_projection->cloudHeader.stamp);
   image_projection->timeScanEnd =
     image_projection->timeScanCur + image_projection->laserCloudIn->points.back().time;
 
   // remove Nan
-  std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(
-    *image_projection->laserCloudIn, *image_projection->laserCloudIn, indices);
+//  std::vector<int> indices;
+//  pcl::removeNaNFromPointCloud(
+//    *image_projection->laserCloudIn, *image_projection->laserCloudIn, indices);
 
   // check dense flag
   if (!image_projection->laserCloudIn->is_dense) {
@@ -228,8 +243,8 @@ bool LoamFeatureLocalization::deskewInfo()
   // make sure IMU data available for the scan
   if (
     imuQueue.empty() ||
-    Utils::stamp2Sec(imuQueue.front().header.stamp) > image_projection->timeScanCur ||
-    Utils::stamp2Sec(imuQueue.back().header.stamp) < image_projection->timeScanEnd) {
+    image_projection->utils->stamp2Sec(imuQueue.front().header.stamp) > image_projection->timeScanCur ||
+    image_projection->utils->stamp2Sec(imuQueue.back().header.stamp) < image_projection->timeScanEnd) {
     RCLCPP_INFO(get_logger(), "Waiting for IMU data ...");
     return false;
   }
@@ -246,7 +261,7 @@ void LoamFeatureLocalization::imuDeskewInfo()
   image_projection->cloudInfo.imu_available = false;
 
   while (!imuQueue.empty()) {
-    if (Utils::stamp2Sec(imuQueue.front().header.stamp) < image_projection->timeScanCur - 0.01)
+    if (image_projection->utils->stamp2Sec(imuQueue.front().header.stamp) < image_projection->timeScanCur - 0.01)
       imuQueue.pop_front();
     else
       break;
@@ -258,11 +273,11 @@ void LoamFeatureLocalization::imuDeskewInfo()
 
   for (int i = 0; i < (int)imuQueue.size(); ++i) {
     sensor_msgs::msg::Imu thisImuMsg = imuQueue[i];
-    double currentImuTime = Utils::stamp2Sec(thisImuMsg.header.stamp);
+    double currentImuTime = image_projection->utils->stamp2Sec(thisImuMsg.header.stamp);
 
     // get roll, pitch, and yaw estimation for this scan
     if (currentImuTime <= image_projection->timeScanCur)
-      Utils::imuRPY2rosRPY(
+      image_projection->utils->imuRPY2rosRPY(
         &thisImuMsg, &image_projection->cloudInfo.imu_roll_init,
         &image_projection->cloudInfo.imu_pitch_init, &image_projection->cloudInfo.imu_yaw_init);
     if (currentImuTime > image_projection->timeScanEnd + 0.01) break;
@@ -278,7 +293,7 @@ void LoamFeatureLocalization::imuDeskewInfo()
 
     // get angular velocity
     double angular_x, angular_y, angular_z;
-    Utils::imuAngular2rosAngular(&thisImuMsg, &angular_x, &angular_y, &angular_z);
+    image_projection->utils->imuAngular2rosAngular(&thisImuMsg, &angular_x, &angular_y, &angular_z);
 
     // integrate rotation
     double timeDiff = currentImuTime - image_projection->imuTime[image_projection->imuPointerCur - 1];
@@ -304,7 +319,7 @@ void LoamFeatureLocalization::odomDeskewInfo()
   image_projection->cloudInfo.odom_available = false;
 
   while (!odomQueue.empty()) {
-    if (Utils::stamp2Sec(odomQueue.front().header.stamp) < image_projection->timeScanCur - 0.01)
+    if (image_projection->utils->stamp2Sec(odomQueue.front().header.stamp) < image_projection->timeScanCur - 0.01)
       odomQueue.pop_front();
     else
       break;
@@ -312,7 +327,7 @@ void LoamFeatureLocalization::odomDeskewInfo()
 
   if (odomQueue.empty()) return;
 
-  if (Utils::stamp2Sec(odomQueue.front().header.stamp) > image_projection->timeScanCur) return;
+  if (image_projection->utils->stamp2Sec(odomQueue.front().header.stamp) > image_projection->timeScanCur) return;
 
   // get start odometry at the beinning of the scan
   nav_msgs::msg::Odometry startOdomMsg;
@@ -320,7 +335,7 @@ void LoamFeatureLocalization::odomDeskewInfo()
   for (int i = 0; i < (int)odomQueue.size(); ++i) {
     startOdomMsg = odomQueue[i];
 
-    if (Utils::stamp2Sec(startOdomMsg.header.stamp) < image_projection->timeScanCur)
+    if (image_projection->utils->stamp2Sec(startOdomMsg.header.stamp) < image_projection->timeScanCur)
       continue;
     else
       break;
@@ -345,14 +360,14 @@ void LoamFeatureLocalization::odomDeskewInfo()
   // get end odometry at the end of the scan
   image_projection->odomDeskewFlag = false;
 
-  if (Utils::stamp2Sec(odomQueue.back().header.stamp) < image_projection->timeScanEnd) return;
+  if (image_projection->utils->stamp2Sec(odomQueue.back().header.stamp) < image_projection->timeScanEnd) return;
 
   nav_msgs::msg::Odometry endOdomMsg;
 
   for (int i = 0; i < (int)odomQueue.size(); ++i) {
     endOdomMsg = odomQueue[i];
 
-    if (Utils::stamp2Sec(endOdomMsg.header.stamp) < image_projection->timeScanEnd)
+    if (image_projection->utils->stamp2Sec(endOdomMsg.header.stamp) < image_projection->timeScanEnd)
       continue;
     else
       break;
@@ -382,6 +397,16 @@ void LoamFeatureLocalization::odomDeskewInfo()
 }
 
 }  // namespace loam_feature_localization
+
+
+//int main(int argc, char * argv[])
+//{
+//  rclcpp::init(argc, argv);
+//  rclcpp::spin(std::make_shared<loam_feature_localization::LoamFeatureLocalization>());
+//  rclcpp::shutdown();
+//
+//  return 0;
+//}
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(loam_feature_localization::LoamFeatureLocalization)

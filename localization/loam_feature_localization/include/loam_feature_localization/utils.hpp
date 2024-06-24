@@ -70,56 +70,61 @@ typedef pcl::PointXYZI PointType;
 class Utils
 {
 public:
-  static std::string byte_hex_to_string(uint8_t byte_hex);
-  static std::string bytes_hexes_to_string(const std::vector<uint8_t> & bytes_hexes);
-  static sensor_msgs::msg::Imu imuConverter(const sensor_msgs::msg::Imu& imu_in);
+  using SharedPtr = std::shared_ptr<Utils>;
+  using ConstSharedPtr = const SharedPtr;
+
+  explicit Utils();
+
+  std::string byte_hex_to_string(uint8_t byte_hex);
+  std::string bytes_hexes_to_string(const std::vector<uint8_t> & bytes_hexes);
+  sensor_msgs::msg::Imu imuConverter(const sensor_msgs::msg::Imu& imu_in);
 //  static std::vector<std::string> string_to_vec_split_by(const std::string & input, char splitter);
 //  static Eigen::Matrix3d ned2enu_converter_for_matrices(const Eigen::Matrix3d & matrix3d);
 
-  static Eigen::Matrix3d extRot;
-  Eigen::Matrix3d extRPY;
-  static Eigen::Quaterniond extQRPY;
+  Eigen::Matrix3d extRot = Eigen::Matrix3d::Zero(4, 4);
+  Eigen::Matrix3d extRPY = Eigen::Matrix3d::Zero(4, 4);
+  Eigen::Quaterniond extQRPY = Eigen::Quaterniond::Identity();
 
 
   template <typename T>
-  static T deg_to_rad(T deg)
+  T deg_to_rad(T deg)
   {
     constexpr double multiplier = M_PI / 180.0;
     return static_cast<T>(deg * multiplier);
   }
 
   template<typename T>
-  static double stamp2Sec(const T& stamp)
+  double stamp2Sec(const T& stamp)
   {
     return rclcpp::Time(stamp).seconds();
   }
 
-  static rclcpp::Time get_time()
+  rclcpp::Time get_time()
   {
     return rclcpp::Clock().now();
   }
 
-  template<typename T>
-  static void imuAngular2rosAngular(sensor_msgs::msg::Imu *thisImuMsg, T *angular_x, T *angular_y, T *angular_z);
+//  template<typename T>
+  void imuAngular2rosAngular(sensor_msgs::msg::Imu *thisImuMsg, double *angular_x, double *angular_y, double *angular_z);
 
-  template<typename T>
-  static void imuRPY2rosRPY(sensor_msgs::msg::Imu *thisImuMsg, T *rosRoll, T *rosPitch, T *rosYaw);
+//  template<typename T>
+  void imuRPY2rosRPY(sensor_msgs::msg::Imu *thisImuMsg, double *rosRoll, double *rosPitch, double *rosYaw);
 
-  static float pointDistance(PointType p);
+  float pointDistance(PointType p);
 
   struct CloudInfo
   {
     bool imu_available;
     bool odom_available;
-    uint32_t imu_roll_init;
-    uint32_t imu_pitch_init;
-    uint32_t imu_yaw_init;
-    uint32_t initial_guess_x;
-    uint32_t initial_guess_y;
-    uint32_t initial_guess_z;
-    uint32_t initial_guess_roll;
-    uint32_t initial_guess_pitch;
-    uint32_t initial_guess_yaw;
+    double imu_roll_init;
+    double imu_pitch_init;
+    double imu_yaw_init;
+    double initial_guess_x;
+    double initial_guess_y;
+    double initial_guess_z;
+    double initial_guess_roll;
+    double initial_guess_pitch;
+    double initial_guess_yaw;
     std::vector<float> point_range;
     std::vector<uint32_t> start_ring_index;
     std::vector<uint32_t> point_col_index;

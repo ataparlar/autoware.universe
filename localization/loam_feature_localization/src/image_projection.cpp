@@ -14,7 +14,7 @@
 
 #include "loam_feature_localization/image_projection.hpp"
 
-#include <pcl/common/impl/eigen.hpp>
+#include <pcl/common/transforms.h>
 
 namespace loam_feature_localization
 {
@@ -22,7 +22,7 @@ namespace loam_feature_localization
 ImageProjection::ImageProjection()
 {
 
-
+  utils = std::make_shared<loam_feature_localization::Utils>();
 
 
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
@@ -158,7 +158,7 @@ void ImageProjection::projectPointCloud()
     thisPoint.z = laserCloudIn->points[i].z;
     thisPoint.intensity = laserCloudIn->points[i].intensity;
 
-    float range = Utils::pointDistance(thisPoint);
+    float range = utils->pointDistance(thisPoint);
     if (range < lidarMinRange || range > lidarMaxRange)
       continue;
 

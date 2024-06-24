@@ -4,9 +4,13 @@ project(loam_feature_localization)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-find_package(PCL REQUIRED COMPONENTS common io registration)
+find_package(PCL REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(pcl_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 include_directories(
   ${PCL_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
@@ -30,9 +34,8 @@ target_link_libraries(loam_feature_localization
   ${cv_bridge_LIBRARIES})
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "LoamFeatureLocalization"
+  PLUGIN "loam_feature_localization::LoamFeatureLocalization"
   EXECUTABLE ${PROJECT_NAME}_node
-  EXECUTOR MultiThreadedExecutor
 )
 
 #if(BUILD_TESTING)

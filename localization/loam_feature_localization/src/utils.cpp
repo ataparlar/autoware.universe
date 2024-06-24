@@ -14,9 +14,10 @@
 
 #include "loam_feature_localization/utils.hpp"
 
+
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2/convert.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <iomanip>
 #include <sstream>
@@ -25,6 +26,10 @@
 
 namespace loam_feature_localization
 {
+
+Utils::Utils()
+{
+}
 
 std::string Utils::byte_hex_to_string(uint8_t byte_hex)
 {
@@ -79,16 +84,16 @@ sensor_msgs::msg::Imu Utils::imuConverter(const sensor_msgs::msg::Imu& imu_in)
   return imu_out;
 }
 
-template<typename T>
-void Utils::imuAngular2rosAngular(sensor_msgs::msg::Imu *thisImuMsg, T *angular_x, T *angular_y, T *angular_z)
+//template<typename T>
+void Utils::imuAngular2rosAngular(sensor_msgs::msg::Imu *thisImuMsg, double *angular_x, double *angular_y, double *angular_z)
 {
   *angular_x = thisImuMsg->angular_velocity.x;
   *angular_y = thisImuMsg->angular_velocity.y;
   *angular_z = thisImuMsg->angular_velocity.z;
 }
 
-template<typename T>
-void Utils::imuRPY2rosRPY(sensor_msgs::msg::Imu *thisImuMsg, T *rosRoll, T *rosPitch, T *rosYaw)
+//template<typename T>
+void Utils::imuRPY2rosRPY(sensor_msgs::msg::Imu *thisImuMsg, double *rosRoll, double *rosPitch, double *rosYaw)
 {
   double imuRoll, imuPitch, imuYaw;
   tf2::Quaternion orientation;

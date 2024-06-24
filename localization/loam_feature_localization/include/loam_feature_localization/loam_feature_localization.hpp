@@ -45,7 +45,6 @@ namespace loam_feature_localization
 
 
 class LoamFeatureLocalization : public rclcpp::Node
-//class LoamFeatureLocalization
 {
 public:
   using SharedPtr = std::shared_ptr<LoamFeatureLocalization>;
@@ -62,7 +61,7 @@ private:
   double lidar_min_range_;
   double lidar_max_range_;
 
-  ImageProjection::ImageProjection::SharedPtr image_projection;
+  ImageProjection::SharedPtr image_projection;
 
   std::mutex imuLock;
   std::mutex odoLock;
@@ -88,6 +87,7 @@ private:
   std::deque<sensor_msgs::msg::PointCloud2> cloudQueue;
   sensor_msgs::msg::PointCloud2 currentCloudMsg;
 
+//  pcl::PointCloud<PointXYZIRT>::Ptr laserCloudIn;
 
 
 

@@ -52,6 +52,8 @@ public:
 
   explicit ImageProjection();
 
+  Utils::SharedPtr utils;
+
   pcl::PointCloud<PointXYZIRT>::Ptr laserCloudIn;
   pcl::PointCloud<OusterPointXYZIRT>::Ptr tmpOusterCloudIn;
   pcl::PointCloud<pcl::PointXYZI>::Ptr fullCloud;
