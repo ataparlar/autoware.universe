@@ -94,8 +94,6 @@ void LoamFeatureLocalization::odometryHandler(const nav_msgs::msg::Odometry::Sha
 void LoamFeatureLocalization::cloudHandler(
   const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudMsg)
 {
-  std::cout << "cloud_handler" << std::endl;
-
   if (!cachePointCloud(laserCloudMsg)) return;
 
   if (!deskewInfo()) return;
@@ -135,17 +133,13 @@ void LoamFeatureLocalization::publishImage()
 bool LoamFeatureLocalization::cachePointCloud(
   const sensor_msgs::msg::PointCloud2::SharedPtr & laserCloudMsg)
 {
-  std::cout << "image_projection->laserCloudIn.size(): " << image_projection->laserCloudIn->size() << std::endl;
-
   // cache point cloud
   cloudQueue.push_back(*laserCloudMsg);
-  std::cout << "cloudQueue.size(): " << cloudQueue.size() << std::endl;
   if (cloudQueue.size() <= 2) return false;
 
   // convert cloud
   currentCloudMsg = std::move(cloudQueue.front());
   cloudQueue.pop_front();
-  std::cout << "cloudQueue.pop_front() " << std::endl;
 
   pcl::moveFromROSMsg(currentCloudMsg, *image_projection->laserCloudIn);
 
@@ -207,6 +201,7 @@ bool LoamFeatureLocalization::cachePointCloud(
       }
     }
     if (image_projection->ringFlag == -1) {
+      image_projection->ringFlag = 2;
       //      if (sensor == SensorType::VELODYNE) {
       //        ringFlag = 2;
       //      } else {

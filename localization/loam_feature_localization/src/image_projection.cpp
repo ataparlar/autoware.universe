@@ -52,6 +52,7 @@ void ImageProjection::resetParameters()
   laserCloudIn->clear();
   extractedCloud->clear();
   // reset range matrix for range image projection
+//  rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_8SC1, cv::Scalar::all(FLT_MAX));
   rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32F, cv::Scalar::all(FLT_MAX));
 
   imuPointerCur = 0;
@@ -179,21 +180,15 @@ void ImageProjection::projectPointCloud()
 //      continue;
 
     int columnIdn = -1;
-//    float horizonAngle;
-//    static float ang_res_x;
-//    if (sensor == SensorType::VELODYNE || sensor == SensorType::OUSTER)
-//    {
-//      horizonAngle = atan2(thisPoint.x, thisPoint.y) * 180 / M_PI;
-//      ang_res_x = 360.0/float(Horizon_SCAN);
-//      columnIdn = -round((horizonAngle-90.0)/ang_res_x) + Horizon_SCAN/2;
-//      if (columnIdn >= Horizon_SCAN)
-//        columnIdn -= Horizon_SCAN;
-//    }
-//    else if (sensor == SensorType::LIVOX)
-//    {
-//      columnIdn = columnIdnCountVec[rowIdn];
-//      columnIdnCountVec[rowIdn] += 1;
-//    }
+    float horizonAngle;
+    static float ang_res_x;
+
+    horizonAngle = atan2(thisPoint.x, thisPoint.y) * 180 / M_PI;
+    ang_res_x = 360.0/float(Horizon_SCAN);
+    columnIdn = -round((horizonAngle)/ang_res_x) + Horizon_SCAN/2;
+//    columnIdn = round((horizonAngle)/ang_res_x);
+    if (columnIdn >= Horizon_SCAN)
+      columnIdn -= Horizon_SCAN;
 
 
     if (columnIdn < 0 || columnIdn >= Horizon_SCAN)
@@ -205,7 +200,7 @@ void ImageProjection::projectPointCloud()
     thisPoint = deskewPoint(&thisPoint, laserCloudIn->points[i].time);
 
     rangeMat.at<float>(rowIdn, columnIdn) = range;
-    //            rangeMat.at<float>(rowIdn, columnIdn) = horizonAngle;
+//                rangeMat.at<float>(rowIdn, columnIdn) = horizonAngle;
 
     //            uchar hue = static_cast<uchar>((horizonAngle * 180.0) / 360 + 90);
     uchar hue = static_cast<uchar>((range * 180.0) / 60);

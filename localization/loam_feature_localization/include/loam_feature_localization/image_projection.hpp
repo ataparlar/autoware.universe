@@ -104,8 +104,8 @@ public:
 
 //  int N_SCAN = 1800;
 //  int Horizon_SCAN = 16;
-  int N_SCAN = 2000;
-  int Horizon_SCAN = 32;
+  int N_SCAN = 32;
+  int Horizon_SCAN = 2000;
 
 private:
 
