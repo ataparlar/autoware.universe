@@ -19,11 +19,15 @@
 namespace loam_feature_localization
 {
 
-ImageProjection::ImageProjection()
+ImageProjection::ImageProjection(
+  double lidarMinRange, double lidarMaxRange, int N_SCAN, int Horizon_SCAN)
 {
+  lidarMinRange_ = lidarMinRange;
+  lidarMaxRange_ = lidarMaxRange;
+  N_SCAN_ = N_SCAN;
+  Horizon_SCAN_ = Horizon_SCAN;
 
   utils = std::make_shared<loam_feature_localization::Utils>();
-
 
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
 }
@@ -36,13 +40,13 @@ void ImageProjection::allocateMemory()
   fullCloud.reset(new pcl::PointCloud<PointType>());
   extractedCloud.reset(new pcl::PointCloud<PointType>());
 
-  fullCloud->points.resize(N_SCAN * Horizon_SCAN);
+  fullCloud->points.resize(N_SCAN_ * Horizon_SCAN_);
 
-  cloudInfo.start_ring_index.assign(N_SCAN, 0);
-  cloudInfo.end_ring_index.assign(N_SCAN, 0);
+  cloudInfo.start_ring_index.assign(N_SCAN_, 0);
+  cloudInfo.end_ring_index.assign(N_SCAN_, 0);
 
-  cloudInfo.point_col_index.assign(N_SCAN * Horizon_SCAN, 0);
-  cloudInfo.point_range.assign(N_SCAN * Horizon_SCAN, 0);
+  cloudInfo.point_col_index.assign(N_SCAN_ * Horizon_SCAN_, 0);
+  cloudInfo.point_range.assign(N_SCAN_ * Horizon_SCAN_, 0);
 
   resetParameters();
 }
@@ -52,8 +56,8 @@ void ImageProjection::resetParameters()
   laserCloudIn->clear();
   extractedCloud->clear();
   // reset range matrix for range image projection
-//  rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_8SC1, cv::Scalar::all(FLT_MAX));
-  rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32F, cv::Scalar::all(FLT_MAX));
+//  rangeMat = cv::Mat(N_SCAN_, Horizon_SCAN_, CV_8SC1, cv::Scalar::all(FLT_MAX));
+  rangeMat = cv::Mat(N_SCAN_, Horizon_SCAN_, CV_32F, cv::Scalar::all(FLT_MAX));
 
   imuPointerCur = 0;
   firstPointFlag = true;
@@ -146,7 +150,7 @@ PointType ImageProjection::deskewPoint(PointType *point, double relTime)
 
 void ImageProjection::projectPointCloud()
 {
-  HSV = cv::Mat(N_SCAN, Horizon_SCAN, CV_8UC3, cv::Scalar::all(FLT_MAX));
+  HSV = cv::Mat(N_SCAN_, Horizon_SCAN_, CV_8UC3, cv::Scalar::all(FLT_MAX));
 
 
   int cloudSize = laserCloudIn->points.size();
@@ -160,7 +164,7 @@ void ImageProjection::projectPointCloud()
     thisPoint.intensity = laserCloudIn->points[i].intensity;
 
     float range = utils->pointDistance(thisPoint);
-    if (range < lidarMinRange || range > lidarMaxRange)
+    if (range < lidarMinRange_ || range > lidarMaxRange_)
       continue;
 
     int rowIdn = laserCloudIn->points[i].ring;
@@ -170,10 +174,10 @@ void ImageProjection::projectPointCloud()
         atan2(thisPoint.z,
               sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) *
         180 / M_PI;
-      rowIdn = (verticalAngle + (N_SCAN - 1)) / 2.0;
+      rowIdn = (verticalAngle + (N_SCAN_ - 1)) / 2.0;
     }
 
-    if (rowIdn < 0 || rowIdn >= N_SCAN)
+    if (rowIdn < 0 || rowIdn >= N_SCAN_)
       continue;
 
 //    if (rowIdn % downsampleRate != 0)
@@ -184,14 +188,14 @@ void ImageProjection::projectPointCloud()
     static float ang_res_x;
 
     horizonAngle = atan2(thisPoint.x, thisPoint.y) * 180 / M_PI;
-    ang_res_x = 360.0/float(Horizon_SCAN);
-    columnIdn = -round((horizonAngle)/ang_res_x) + Horizon_SCAN/2;
+    ang_res_x = 360.0/float(Horizon_SCAN_);
+    columnIdn = -round((horizonAngle)/ang_res_x) + Horizon_SCAN_ /2;
 //    columnIdn = round((horizonAngle)/ang_res_x);
-    if (columnIdn >= Horizon_SCAN)
-      columnIdn -= Horizon_SCAN;
+    if (columnIdn >= Horizon_SCAN_)
+      columnIdn -= Horizon_SCAN_;
 
 
-    if (columnIdn < 0 || columnIdn >= Horizon_SCAN)
+    if (columnIdn < 0 || columnIdn >= Horizon_SCAN_)
       continue;
 
     if (rangeMat.at<float>(rowIdn, columnIdn) != FLT_MAX)
@@ -206,7 +210,7 @@ void ImageProjection::projectPointCloud()
     uchar hue = static_cast<uchar>((range * 180.0) / 60);
     HSV.at<cv::Vec3b>(rowIdn, columnIdn) = cv::Vec3b(hue, 255.0, 255.0);
 
-    int index = columnIdn + rowIdn * Horizon_SCAN;
+    int index = columnIdn + rowIdn * Horizon_SCAN_;
     fullCloud->points[index] = thisPoint;
   }
 
@@ -235,10 +239,10 @@ void ImageProjection::cloudExtraction()
 {
   int count = 0;
   // extract segmented cloud for lidar odometry
-  for (int i = 0; i < N_SCAN; ++i)
+  for (int i = 0; i < N_SCAN_; ++i)
   {
     cloudInfo.start_ring_index[i] = count - 1 + 5;
-    for (int j = 0; j < Horizon_SCAN; ++j)
+    for (int j = 0; j < Horizon_SCAN_; ++j)
     {
       if (rangeMat.at<float>(i,j) != FLT_MAX)
       {
@@ -247,7 +251,7 @@ void ImageProjection::cloudExtraction()
         // save range info
         cloudInfo.point_range[count] = rangeMat.at<float>(i,j);
         // save extracted cloud
-        extractedCloud->push_back(fullCloud->points[j + i*Horizon_SCAN]);
+        extractedCloud->push_back(fullCloud->points[j + i* Horizon_SCAN_]);
         // size of extracted cloud
         ++count;
       }

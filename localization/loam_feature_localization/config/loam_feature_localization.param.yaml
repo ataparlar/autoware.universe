@@ -3,5 +3,11 @@
     imu_topic: /applanix/lvx_client/imu_raw
     odom_topic: /applanix/lvx_client/odom
     point_cloud_topic: /hesai/pandar
+
     lidar_min_range: 2.0
     lidar_max_range: 120.0
+    N_SCAN: 32.0
+    Horizon_SCAN: 2000.0
+    odometry_surface_leaf_size: 0.4
+    edge_threshold: 1.0
+    surface_threshold: 0.1

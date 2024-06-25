@@ -18,6 +18,7 @@
 #include "utils.hpp"
 
 #include <Eigen/Geometry>
+#include <opencv2/opencv.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance.hpp>
@@ -28,7 +29,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <pcl/point_cloud.h>
 
@@ -42,15 +42,14 @@ using PointCloud2 = sensor_msgs::msg::PointCloud2;
 
 const int queueLength = 2000;
 
-
-
 class ImageProjection
 {
 public:
   using SharedPtr = std::shared_ptr<ImageProjection>;
   using ConstSharedPtr = const SharedPtr;
 
-  explicit ImageProjection();
+  explicit ImageProjection(
+    double lidarMinRange, double lidarMaxRange, int N_SCAN, int Horizon_SCAN);
 
   Utils::SharedPtr utils;
 
@@ -68,12 +67,12 @@ public:
   cv::Mat rangeMat;
   cv::Mat HSV;
 
-
-  double lidarMinRange;
-  double lidarMaxRange;
+  double lidarMinRange_;
+  double lidarMaxRange_;
+  int N_SCAN_;
+  int Horizon_SCAN_;
 
   Eigen::Affine3f transStartInverse;
-
 
   int ringFlag = 0;
   int deskewFlag;
@@ -88,35 +87,21 @@ public:
 
   std::vector<int> columnIdnCountVec;
 
-  double *imuTime = new double[queueLength];
-  double *imuRotX = new double[queueLength];
-  double *imuRotY = new double[queueLength];
-  double *imuRotZ = new double[queueLength];
-
+  double * imuTime = new double[queueLength];
+  double * imuRotX = new double[queueLength];
+  double * imuRotY = new double[queueLength];
+  double * imuRotZ = new double[queueLength];
 
   void allocateMemory();
   void resetParameters();
-  void findRotation(double pointTime, float *rotXCur, float *rotYCur, float *rotZCur);
-  void findPosition(double relTime, float *posXCur, float *posYCur, float *posZCur);
-  PointType deskewPoint(PointType *point, double relTime);
+  void findRotation(double pointTime, float * rotXCur, float * rotYCur, float * rotZCur);
+  void findPosition(double relTime, float * posXCur, float * posYCur, float * posZCur);
+  PointType deskewPoint(PointType * point, double relTime);
   void projectPointCloud();
   void cloudExtraction();
 
-//  int N_SCAN = 1800;
-//  int Horizon_SCAN = 16;
-  int N_SCAN = 32;
-  int Horizon_SCAN = 2000;
-
 private:
-
-
 };
-}
-
-
-
-
-
-
+}  // namespace loam_feature_localization
 
 #endif  // LOAM_FEATURE_LOCALIZATION__IMAGE_PROJECTION_HPP_

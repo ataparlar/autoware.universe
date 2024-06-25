@@ -19,6 +19,7 @@
 
 #include "utils.hpp"
 #include "image_projection.hpp"
+#include "feature_extraction.hpp"
 #include <Eigen/Geometry>
 
 #include <rclcpp/rclcpp.hpp>
@@ -60,8 +61,14 @@ private:
   std::string odom_topic_;
   double lidar_min_range_;
   double lidar_max_range_;
+  double N_SCAN_;
+  double Horizon_SCAN_;
+  double odometry_surface_leaf_size_;
+  double edge_threshold_;
+  double surface_threshold_;
 
   ImageProjection::SharedPtr image_projection;
+  FeatureExtraction::SharedPtr feature_extraction;
 
   std::mutex imuLock;
   std::mutex odoLock;
@@ -75,6 +82,11 @@ private:
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubExtractedCloud;
   //  rclcpp::Publisher<Utils::CloudInfo>::SharedPtr pubLaserCloudInfo;
+
+
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubCornerCloud;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubSurfaceCloud;
+
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subImu;
   rclcpp::CallbackGroup::SharedPtr callbackGroupImu;
@@ -99,6 +111,7 @@ private:
   void imuDeskewInfo();
   void odomDeskewInfo();
   void publishImage();
+  void publishClouds();
 
   int N_SCAN = 1800;
   int Horizon_SCAN = 16;

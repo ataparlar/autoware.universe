@@ -13,6 +13,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 include_directories(
   ${PCL_INCLUDE_DIRS}
+  ${pcl_conversions_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${cv_bridge_INCLUDE_DIRS})
 
@@ -30,6 +31,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 link_directories(${PCL_LIBRARY_DIRS})
 target_link_libraries(loam_feature_localization
   ${PCL_LIBRARIES}
+  ${pcl_conversions_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${cv_bridge_LIBRARIES})
 
