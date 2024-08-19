@@ -102,7 +102,7 @@ jobs:
 
       - name: Build
         if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
-        uses: autowarefoundation/autoware-github-actions/colcon-build@vfeat/colcon-build-nice
+        uses: autowarefoundation/autoware-github-actions/colcon-build@feat/colcon-build-nice
         with:
           rosdistro: ${{ matrix.rosdistro }}
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
