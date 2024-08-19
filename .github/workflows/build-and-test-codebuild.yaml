@@ -21,7 +21,7 @@ env:
   CXX: /usr/lib/ccache/g++
 
 jobs:
-  build-and-test-codebuild:
+  build-and-test:
     runs-on: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
     container: ${{ matrix.container }}${{ matrix.container-suffix }}
     strategy:

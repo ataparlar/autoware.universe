@@ -8,6 +8,10 @@ on:
       - reopened
       - labeled
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 env:
   CC: /usr/lib/ccache/gcc
   CXX: /usr/lib/ccache/g++
@@ -36,7 +40,7 @@ jobs:
             container: ghcr.io/autowarefoundation/autoware:latest-autoware-universe
             build-depends-repos: build_depends.repos
           - container-suffix: -cuda
-            runner: [self-hosted, linux, X64, cpu]
+            runner: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
           - container-suffix: ""
             runner: ubuntu-latest
     steps:
@@ -98,7 +102,7 @@ jobs:
 
       - name: Build
         if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
-        uses: autowarefoundation/autoware-github-actions/colcon-build@v1
+        uses: autowarefoundation/autoware-github-actions/colcon-build@vfeat/colcon-build-nice
         with:
           rosdistro: ${{ matrix.rosdistro }}
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
