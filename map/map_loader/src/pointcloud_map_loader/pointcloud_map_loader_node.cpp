@@ -43,9 +43,26 @@ bool is_pcd_file(const std::string & p)
 PointCloudMapLoaderNode::PointCloudMapLoaderNode(const rclcpp::NodeOptions & options)
 : Node("pointcloud_map_loader", options)
 {
-  const auto pcd_paths =
+  const auto pcd_paths_vector =
     get_pcd_paths(declare_parameter<std::vector<std::string>>("pcd_paths_or_directory"));
-  std::string pcd_metadata_path = declare_parameter<std::string>("pcd_metadata_path");
+  const auto & pcd_paths = pcd_paths_vector.at(0);
+  const auto & corner_pcd_paths = pcd_paths_vector.at(1);
+  const auto & surface_pcd_paths = pcd_paths_vector.at(2);
+
+  std::string pcd_metadata_path, corner_pcd_metadata_path, surface_pcd_metadata_path;
+  const auto pcd_metadatas =
+    get_pcd_metadata_paths(declare_parameter<std::string>("pcd_metadata_folder"));
+  for (const auto & metadata_path : pcd_metadatas) {
+    auto filename = metadata_path.substr(metadata_path.find_last_of("/\\") + 1);
+    if (filename == "pointcloud_map_metadata.yaml"){
+      pcd_metadata_path = metadata_path;
+    } else if (filename == "corner_pointcloud_map_metadata.yaml") {
+      corner_pcd_metadata_path = metadata_path;
+    } else if (filename == "surface_ğpointcloud_map_metadata.yaml") {
+      surface_pcd_metadata_path = metadata_path;
+    }
+  }
+
   bool enable_whole_load = declare_parameter<bool>("enable_whole_load");
   bool enable_downsample_whole_load = declare_parameter<bool>("enable_downsampled_whole_load");
   bool enable_partial_load = declare_parameter<bool>("enable_partial_load");
@@ -65,12 +82,18 @@ PointCloudMapLoaderNode::PointCloudMapLoaderNode(const rclcpp::NodeOptions & opt
 
   // Parse the metadata file and get the map of (absolute pcd path, pcd file metadata)
   auto pcd_metadata_dict = get_pcd_metadata(pcd_metadata_path, pcd_paths);
+  auto corner_pcd_metadata_dict = get_pcd_metadata(surface_pcd_metadata_path, corner_pcd_paths);
+  auto surface_pcd_metadata_dict = get_pcd_metadata(surface_pcd_metadata_path, surface_pcd_paths);
 
   if (enable_partial_load) {
     partial_map_loader_ = std::make_unique<PartialMapLoaderModule>(this, pcd_metadata_dict);
   }
 
   differential_map_loader_ = std::make_unique<DifferentialMapLoaderModule>(this, pcd_metadata_dict);
+  differential_corner_map_loader_ =
+    std::make_unique<DifferentialMapLoaderModule>(this, corner_pcd_metadata_dict);
+  differential_surface_map_loader_ =
+    std::make_unique<DifferentialMapLoaderModule>(this, surface_pcd_metadata_dict);
 
   if (enable_selected_load) {
     selected_map_loader_ = std::make_unique<SelectedMapLoaderModule>(this, pcd_metadata_dict);
@@ -121,10 +144,12 @@ std::map<std::string, PCDFileMetadata> PointCloudMapLoaderNode::get_pcd_metadata
   throw std::runtime_error("PCD metadata file not found: " + pcd_metadata_path);
 }
 
-std::vector<std::string> PointCloudMapLoaderNode::get_pcd_paths(
+std::vector<std::vector<std::string>> PointCloudMapLoaderNode::get_pcd_paths(
   const std::vector<std::string> & pcd_paths_or_directory) const
 {
   std::vector<std::string> pcd_paths;
+  std::vector<std::string> corner_pcd_paths;
+  std::vector<std::string> surface_pcd_paths;
   for (const auto & p : pcd_paths_or_directory) {
     if (!fs::exists(p)) {
       RCLCPP_ERROR_STREAM(get_logger(), "invalid path: " << p);
@@ -135,16 +160,56 @@ std::vector<std::string> PointCloudMapLoaderNode::get_pcd_paths(
     }
 
     if (fs::is_directory(p)) {
-      for (const auto & file : fs::directory_iterator(p)) {
-        const auto filename = file.path().string();
-        if (is_pcd_file(filename)) {
-          pcd_paths.push_back(filename);
+      if (p == "full") {
+        for (const auto & file : fs::directory_iterator(p)) {
+          const auto filename = file.path().string();
+          if (is_pcd_file(filename)) {
+            pcd_paths.push_back(filename);
+          }
+        }
+      } else if (p == "corner") {
+        for (const auto & file : fs::directory_iterator(p)) {
+          const auto filename = file.path().string();
+          if (is_pcd_file(filename)) {
+            corner_pcd_paths.push_back(filename);
+          }
+        }
+      } else if (p == "surface") {
+        for (const auto & file : fs::directory_iterator(p)) {
+          const auto filename = file.path().string();
+          if (is_pcd_file(filename)) {
+            surface_pcd_paths.push_back(filename);
+          }
         }
       }
     }
   }
-  return pcd_paths;
+  std::vector<std::vector<std::string>> vector;
+  vector.push_back(pcd_paths);
+  vector.push_back(corner_pcd_paths);
+  vector.push_back(surface_pcd_paths);
+  return vector;
 }
+
+std::vector<std::string> PointCloudMapLoaderNode::get_pcd_metadata_paths(
+  const std::string & pcd_metadata_folder_path) const
+{
+  std::vector<std::string> pcd_metadata_paths;
+
+  if (!fs::exists(pcd_metadata_folder_path)) {
+    RCLCPP_ERROR_STREAM(get_logger(), "invalid path for metadata file folder: " << pcd_metadata_folder_path);
+  }
+
+  for (const auto & file : fs::directory_iterator(pcd_metadata_folder_path)) {
+    const auto filename = file.path().string();
+
+    const std::string ext = fs::path(filename).extension();
+    if (ext == ".yaml") {
+      pcd_metadata_paths.push_back(filename);
+    }
+  }
+  return pcd_metadata_paths;
+};
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(PointCloudMapLoaderNode)

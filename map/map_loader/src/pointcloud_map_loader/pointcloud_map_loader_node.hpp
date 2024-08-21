@@ -43,10 +43,14 @@ private:
   std::unique_ptr<PointcloudMapLoaderModule> downsampled_pcd_map_loader_;
   std::unique_ptr<PartialMapLoaderModule> partial_map_loader_;
   std::unique_ptr<DifferentialMapLoaderModule> differential_map_loader_;
+  std::unique_ptr<DifferentialMapLoaderModule> differential_corner_map_loader_;
+  std::unique_ptr<DifferentialMapLoaderModule> differential_surface_map_loader_;
   std::unique_ptr<SelectedMapLoaderModule> selected_map_loader_;
 
-  std::vector<std::string> get_pcd_paths(
+  std::vector<std::vector<std::string>> get_pcd_paths(
     const std::vector<std::string> & pcd_paths_or_directory) const;
+  std::vector<std::string> get_pcd_metadata_paths(
+    const std::string & pcd_metadata_folder_path) const;
   std::map<std::string, PCDFileMetadata> get_pcd_metadata(
     const std::string & pcd_metadata_path, const std::vector<std::string> & pcd_paths) const;
 };
