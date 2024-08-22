@@ -147,6 +147,9 @@ std::map<std::string, PCDFileMetadata> PointCloudMapLoaderNode::get_pcd_metadata
 std::vector<std::vector<std::string>> PointCloudMapLoaderNode::get_pcd_paths(
   const std::vector<std::string> & pcd_paths_or_directory) const
 {
+  for (const auto & p : pcd_paths_or_directory) {
+    RCLCPP_INFO(get_logger(), "\n\nPCD_PATH: %s\n\n", p.c_str());
+  }
   std::vector<std::string> pcd_paths;
   std::vector<std::string> corner_pcd_paths;
   std::vector<std::string> surface_pcd_paths;
@@ -160,25 +163,38 @@ std::vector<std::vector<std::string>> PointCloudMapLoaderNode::get_pcd_paths(
     }
 
     if (fs::is_directory(p)) {
-      if (p == "full") {
-        for (const auto & file : fs::directory_iterator(p)) {
-          const auto filename = file.path().string();
-          if (is_pcd_file(filename)) {
-            pcd_paths.push_back(filename);
-          }
-        }
-      } else if (p == "corner") {
-        for (const auto & file : fs::directory_iterator(p)) {
-          const auto filename = file.path().string();
-          if (is_pcd_file(filename)) {
-            corner_pcd_paths.push_back(filename);
-          }
-        }
-      } else if (p == "surface") {
-        for (const auto & file : fs::directory_iterator(p)) {
-          const auto filename = file.path().string();
-          if (is_pcd_file(filename)) {
-            surface_pcd_paths.push_back(filename);
+      for (const auto & folder1 : fs::directory_iterator(p)) {
+        auto folder1_filename = folder1.path().string().substr(folder1.path().string().find_last_of("/\\") + 1);
+        RCLCPP_INFO(get_logger(), "\n\nfolder1 name : %s\n\n", folder1_filename.c_str());
+        if (folder1_filename == "pointcloud_map.pcd" && fs::is_directory(folder1)) {
+          for (const auto & folder2 : fs::directory_iterator(folder1)) {
+            auto folder2_filename = folder2.path().string().substr(folder2.path().string().find_last_of("/\\") + 1);
+            if (folder2_filename == "full") {
+              for (const auto & file : fs::directory_iterator(p)) {
+                const auto filename = file.path().string();
+                if (is_pcd_file(filename)) {
+                  pcd_paths.push_back(filename);
+                }
+              }
+              RCLCPP_INFO(get_logger(), "\n\nDIR NAME IS FULL: \n\n");
+
+            } else if (folder2_filename == "corner") {
+              for (const auto & file : fs::directory_iterator(p)) {
+                const auto filename = file.path().string();
+                if (is_pcd_file(filename)) {
+                  corner_pcd_paths.push_back(filename);
+                }
+              }
+              RCLCPP_INFO(get_logger(), "\n\nDIR NAME IS CORNER: \n\n");
+            } else if (folder2_filename == "surface") {
+              for (const auto & file : fs::directory_iterator(p)) {
+                const auto filename = file.path().string();
+                if (is_pcd_file(filename)) {
+                  surface_pcd_paths.push_back(filename);
+                }
+              }
+              RCLCPP_INFO(get_logger(), "\n\nDIR NAME IS SURFACE: \n\n");
+            }
           }
         }
       }

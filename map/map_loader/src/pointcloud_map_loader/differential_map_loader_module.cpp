@@ -84,6 +84,7 @@ DifferentialMapLoaderModule::load_point_cloud_map_cell_with_id(
   if (pcl::io::loadPCDFile(path, pcd) == -1) {
     RCLCPP_ERROR_STREAM(logger_, "PCD load failed: " << path);
   }
+  RCLCPP_INFO(logger_, "\n\n\n\n\n\n MAP IS LOADED \n\n\n\n\n\n");
   autoware_map_msgs::msg::PointCloudMapCellWithID pointcloud_map_cell_with_id;
   pointcloud_map_cell_with_id.pointcloud = pcd;
   pointcloud_map_cell_with_id.cell_id = map_id;
